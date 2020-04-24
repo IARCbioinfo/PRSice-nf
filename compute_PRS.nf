@@ -97,7 +97,7 @@ process get_chr {
   shell:
   '''
   awk '{print $snp,$chr,$pos,$a1,$a2,$stat,$se,$pval}' snp=!{params.snp_col} chr=!{params.chr_col} pos=!{params.pos_col} a1=!{params.a1_col} a2=!{params.a2_col} stat=!{params.stat_col} se=!{params.se_col} pval=!{params.pval_col} !{params.base_file} > base_file.txt
-  tail -n +2 !{params.base_file} | awk '{print $2}' | sort | uniq  > chr_list.txt
+  tail -n +2 base_file.txt | awk '{print $2}' | sort | uniq  > chr_list.txt
   '''
 }
 
