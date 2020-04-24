@@ -109,8 +109,8 @@ process compute_PRS_per_chr {
   file base from base_file_updated
 
   output:
-  file '*.all.score' into scores
-  file '*.snp' into snps_included
+  file '*.all.score' optional true into scores
+  file '*.snp' optional true into snps_included
 
   shell:
   '''
@@ -122,19 +122,26 @@ process compute_PRS_per_chr {
   fi
   awk '{if($2==c)print $0}' c=${chr_val} !{base} > chr_${chr_val}_base.txt
 
-  if [[ $(wc -l <chr_${chr_val}_base.txt) -ge 1 ]]
+  n_snps=$(grep -Ff <(cat chr_${chr_val}_base.txt | cut -d ' ' -f 2,3  | sed 's/ /:/g') !{params.bgen_snps_perCHR}chr_${chr_val}_SNPs.txt | wc -l)
+  if [[ ${n_snps} -ge 1 ]]
   then
     grep -Ff <(cat chr_${chr_val}_base.txt | cut -d ' ' -f 2,3  | sed 's/ /:/g') !{params.bgen_snps_perCHR}chr_${chr_val}_SNPs.txt > chr_${chr_val}_SNPs_subset.txt
-
     !{params.Rscript} !{baseDir}/bin/match_IDs.r chr_${chr_val}_base.txt chr_${chr_val}_SNPs_subset.txt ${chr_val}
-    !{params.Rscript} !{params.PRSice_path}PRSice.R --prsice !{params.PRSice_path}PRSice_linux \
-    --A1 A1 --A2 A2 --chr CHR --bp BP --beta --pvalue PVAL --snp SNP --stat STAT \
-    --bar-levels !{params.pval_thr} --fastscore \
-    --base PRSice_input_chr_${chr_val}.txt --pheno-file !{params.pheno_file} \
-    --id-delim "_" --target ${bgen_file} \
-    --quantile 20 --all-score  --print-snp --score sum --binary-target T --type bgen  --no-clump \
-    --no-regress --out chr${chr_val}
+
+    n_snps2=$(tail -n +2 PRSice_input_chr_${chr_val}.txt | awk '{ if (($4=="T" && $5=="A")||($4=="A" && $5=="T")||($4=="C" && $5=="G")||($4=="G" && $5=="C")) print $2, "ambig" ; else print $2 ;}' | grep -v ambig | wc -l)
+    if [[ ${n_snps2} -ge 1 ]]
+    then
+      !{params.Rscript} !{params.PRSice_path}PRSice.R --prsice !{params.PRSice_path}PRSice_linux \
+      --A1 A1 --A2 A2 --chr CHR --bp BP --beta --pvalue PVAL --snp SNP --stat STAT \
+      --bar-levels !{params.pval_thr} --fastscore \
+      --base PRSice_input_chr_${chr_val}.txt --pheno-file !{params.pheno_file} \
+      --id-delim "_" --target ${bgen_file} \
+      --quantile 20 --all-score  --print-snp --score sum --binary-target T --type bgen  --no-clump \
+      --no-regress --out chr${chr_val}
+    fi
   fi
+
+
 
   '''
 
