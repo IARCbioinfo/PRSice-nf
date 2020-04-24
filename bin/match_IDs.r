@@ -11,22 +11,12 @@ colnames(snp_list)=c("SNP","CHR","BP","A1","A2","STAT","SE","PVAL")
 info_file=fread(info,header = F,stringsAsFactors = F)
 colnames(info_file)=c("alternate_ids","rsid", "chromosome","position","number_of_alleles","first_allele","alternative_alleles" )
 
-# add unique rs identifier
-# custom_f=function(id){
-#   splitted_id=unlist(strsplit(id,":"))
-#   chr_pos=paste(splitted_id[1:2],collapse = ":")
-#   alleles=sort(c(splitted_id[3],splitted_id[4]))
-#   return(paste(chr_pos,alleles[1],alleles[2],sep=":"))
-# }
-
 custom_f=function(chr,pos,a1,a2){
   chr_pos=paste(c(chr,pos),collapse = ":")
   alleles=sort(c(a1,a2))
   return(paste(chr_pos,alleles[1],alleles[2],sep=":"))
 }
 
-# snp_list[, new_ID := mcmapply(custom_f,SNP,mc.cores=3L)]
-# info_file[, new_ID := mcmapply(custom_f,alternate_ids,mc.cores=3L)]
 snp_list[, new_ID := mcmapply(custom_f,CHR,BP,A1,A2,mc.cores=3L)]
 info_file[, new_ID := mcmapply(custom_f,chromosome,position,first_allele,alternative_alleles,mc.cores=3L)]
 
