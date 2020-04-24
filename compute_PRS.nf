@@ -74,6 +74,7 @@ params.bgenix="bgenix"
 params.Rscript="Rscript"
 params.bgen_pattern=".bgen"
 params.pval_thr="0.001,0.01,1"
+params.bgen_snps_perCHR=""
 
 params.snp_col=1
 params.chr_col=2
@@ -97,7 +98,7 @@ process get_chr {
   shell:
   '''
   awk '{print $snp,$chr,$pos,$a1,$a2,$stat,$se,$pval}' snp=!{params.snp_col} chr=!{params.chr_col} pos=!{params.pos_col} a1=!{params.a1_col} a2=!{params.a2_col} stat=!{params.stat_col} se=!{params.se_col} pval=!{params.pval_col} !{params.base_file} > base_file.txt
-  tail -n +2 base_file.txt | awk '{print $2}' | sort | uniq  > chr_list.txt
+  tail -n +2 !{params.base_file} | awk '{print $2}' | sort | uniq  > chr_list.txt
   '''
 }
 
@@ -116,12 +117,14 @@ process compute_PRS_per_chr {
   chr_val=!{chr}
   echo $chr_val
   bgen_file=$(grep chr${chr_val}!{params.bgen_pattern} !{params.bgen_list} | sed 's/.bgen//g')
-  echo ${bgen_file}
-  !{params.bgenix} -g ${bgen_file}.bgen -list > chr_${chr_val}_SNPs.txt
+  if [ ! -f "!{params.bgen_snps_perCHR}chr_${chr_val}_SNPs.txt" ]; then
+    !{params.bgenix} -g ${bgen_file}.bgen -list > !{params.bgen_snps_perCHR}chr_${chr_val}_SNPs.txt
+  fi
   awk '{if($2==c)print $0}' c=${chr_val} !{base} > chr_${chr_val}_base.txt
+
   if [[ $(wc -l <chr_${chr_val}_base.txt) -ge 1 ]]
   then
-    grep -Ff <(cat chr_${chr_val}_base.txt | cut -d ' ' -f 2,3  | sed 's/ /:/g') chr_${chr_val}_SNPs.txt > chr_${chr_val}_SNPs_subset.txt
+    grep -Ff <(cat chr_${chr_val}_base.txt | cut -d ' ' -f 2,3  | sed 's/ /:/g') !{params.bgen_snps_perCHR}chr_${chr_val}_SNPs.txt > chr_${chr_val}_SNPs_subset.txt
 
     !{params.Rscript} !{baseDir}/bin/match_IDs.r chr_${chr_val}_base.txt chr_${chr_val}_SNPs_subset.txt ${chr_val}
     !{params.Rscript} !{params.PRSice_path}PRSice.R --prsice !{params.PRSice_path}PRSice_linux \
