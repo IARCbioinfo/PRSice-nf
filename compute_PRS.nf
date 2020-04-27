@@ -75,6 +75,7 @@ params.Rscript="Rscript"
 params.bgen_pattern=".bgen"
 params.pval_thr="0.001,0.01,1"
 params.bgen_snps_perCHR=""
+params.base_info = "yes"
 
 params.snp_col=1
 params.chr_col=2
@@ -84,6 +85,7 @@ params.a2_col=5
 params.stat_col=6
 params.se_col=7
 params.pval_col=8
+params.qual_col=9
 
 // add a if to check if a samples file is provided if yes add the option --keep
 // add a if to deal with plink files?
@@ -97,7 +99,7 @@ process get_chr {
 
   shell:
   '''
-  awk '{print $snp,$chr,$pos,$a1,$a2,$stat,$se,$pval}' snp=!{params.snp_col} chr=!{params.chr_col} pos=!{params.pos_col} a1=!{params.a1_col} a2=!{params.a2_col} stat=!{params.stat_col} se=!{params.se_col} pval=!{params.pval_col} !{params.base_file} > base_file.txt
+  awk '{print $snp,$chr,$pos,$a1,$a2,$stat,$se,$pval,$qual}' snp=!{params.snp_col} chr=!{params.chr_col} pos=!{params.pos_col} a1=!{params.a1_col} a2=!{params.a2_col} stat=!{params.stat_col} se=!{params.se_col} pval=!{params.pval_col} qual=!{params.qual_col} !{params.base_file} > base_file.txt
   tail -n +2 !{params.base_file} | awk '{print $2}' | sort | uniq  > chr_list.txt
   '''
 }
@@ -113,6 +115,9 @@ process compute_PRS_per_chr {
   file '*.snp' optional true into snps_included
 
   shell:
+  if ( params.base_info == "yes" ) {
+    PRSice_opts="--base-info QUAL,0.3"
+  }
   '''
   chr_val=!{chr}
   echo $chr_val
@@ -137,7 +142,7 @@ process compute_PRS_per_chr {
       --base PRSice_input_chr_${chr_val}.txt --pheno-file !{params.pheno_file} \
       --id-delim "_" --target ${bgen_file} \
       --quantile 20 --all-score  --print-snp --score sum --binary-target T --type bgen  --no-clump \
-      --no-regress --out chr${chr_val}
+      --no-regress --out chr${chr_val} !{PRSice_opts}
     fi
   fi
 
