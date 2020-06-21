@@ -75,7 +75,7 @@ params.Rscript="Rscript"
 params.bgen_pattern=".bgen"
 params.pval_thr="0.001,0.01,1"
 params.bgen_snps_perCHR=""
-params.base_info = "yes"
+params.qual_val = 0
 
 params.snp_col=1
 params.chr_col=2
@@ -115,9 +115,6 @@ process compute_PRS_per_chr {
   file '*.snp' optional true into snps_included
 
   shell:
-  if ( params.base_info == "yes" ) {
-    PRSice_opts="--base-info QUAL,0.3"
-  }
   '''
   chr_val=!{chr}
   echo $chr_val
@@ -134,7 +131,8 @@ process compute_PRS_per_chr {
     !{params.Rscript} !{baseDir}/bin/match_IDs.r chr_${chr_val}_base.txt chr_${chr_val}_SNPs_subset.txt ${chr_val}
 
     n_snps2=$(tail -n +2 PRSice_input_chr_${chr_val}.txt | awk '{ if (($4=="T" && $5=="A")||($4=="A" && $5=="T")||($4=="C" && $5=="G")||($4=="G" && $5=="C")) print $2, "ambig" ; else print $2 ;}' | grep -v ambig | wc -l)
-    if [[ ${n_snps2} -ge 1 ]]
+    n_snps3=$(tail -n +2 PRSice_input_chr_${chr_val}.txt | awk '{ if ($9>=qual_thr) print $2 }' qual_thr=!{params.qual_val} | wc -l)
+    if [[ ${n_snps2} -ge 1 && ${n_snps3} -ge 1 ]]
     then
       !{params.Rscript} !{params.PRSice_path}PRSice.R --prsice !{params.PRSice_path}PRSice_linux \
       --A1 A1 --A2 A2 --chr CHR --bp BP --beta --pvalue PVAL --snp SNP --stat STAT \
@@ -142,7 +140,7 @@ process compute_PRS_per_chr {
       --base PRSice_input_chr_${chr_val}.txt --pheno-file !{params.pheno_file} \
       --id-delim "_" --target ${bgen_file} \
       --quantile 20 --all-score  --print-snp --score sum --binary-target T --type bgen  --no-clump \
-      --no-regress --out chr${chr_val} !{PRSice_opts}
+      --no-regress --out chr${chr_val} --base-info QUAL,!{params.qual_val}
     fi
   fi
 
