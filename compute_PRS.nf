@@ -130,9 +130,9 @@ process compute_PRS_per_chr {
     grep -Ff <(cat chr_${chr_val}_base.txt | cut -d ' ' -f 2,3  | sed 's/ /:/g') !{params.bgen_snps_perCHR}chr_${chr_val}_SNPs.txt > chr_${chr_val}_SNPs_subset.txt
     !{params.Rscript} !{baseDir}/bin/match_IDs.r chr_${chr_val}_base.txt chr_${chr_val}_SNPs_subset.txt ${chr_val}
 
-    n_snps2=$(tail -n +2 PRSice_input_chr_${chr_val}.txt | awk '{ if (($4=="T" && $5=="A")||($4=="A" && $5=="T")||($4=="C" && $5=="G")||($4=="G" && $5=="C")) print $2, "ambig" ; else print $2 ;}' | grep -v ambig | wc -l)
-    n_snps3=$(tail -n +2 PRSice_input_chr_${chr_val}.txt | awk '{ if ($9>=qual_thr) print $2 }' qual_thr=!{params.qual_val} | wc -l)
-    if [[ ${n_snps2} -ge 1 && ${n_snps3} -ge 1 ]]
+    !{params.Rscript} !{baseDir}/bin/check_PRSice_input.r PRSice_input_chr_${chr_val}.txt
+    n_snps=$(cat PRSice_input_chr_${chr_val}.txt | tail -n +2 | wc -l)
+    if [[ ${n_snps} -ge 1 ]]
     then
       !{params.Rscript} !{params.PRSice_path}PRSice.R --prsice !{params.PRSice_path}PRSice_linux \
       --A1 A1 --A2 A2 --chr CHR --bp BP --beta --pvalue PVAL --snp SNP --stat STAT \
